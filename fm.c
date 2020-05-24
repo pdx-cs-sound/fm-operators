@@ -27,26 +27,27 @@ typedef struct GenFITL {
 } GenFITL;
 
 /* Initializer. */
-void Init(GenFITL *G, double Tab[], int TabLen) {
+void Init(GenFITL * G, double Tab[], int TabLen) {
     G->Table = Tab;
-    G->L = TabLen;   
+    G->L = TabLen;
     G->FreqAdd = 0;
 }
 
 /* Generalized modulus operation. */
 /* See (Moore 1990) for details. */
-extern double genmod(double a, int b); 
+extern double genmod(double a, int b);
 
-void Reset(GenFITL *G) {
+/* Start again at beginning of wave table. */
+void Reset(GenFITL * G) {
     G->FreqAdd = 0;
 }
 
 /* Osc is the "one-tick" lookup oscillator returning one sample. */
-double Osc(GenFITL *G, double Amp, double FreqInc, double Phase) {
+double Osc(GenFITL * G, double Amp, double FreqInc, double Phase) {
     /* Truncate lookup index. */
-    G->Look = genmod(G->FreqAdd+Phase, G->L);
+    G->Look = genmod(G->FreqAdd + Phase, G->L);
     /* Increment FreqAdd. */
-    G->FreqAdd = genmod(G->FreqAdd+FreqInc, G->L);
+    G->FreqAdd = genmod(G->FreqAdd + FreqInc, G->L);
     /* Return sample. */
     return Amp * G->Table[G->Look];
 }
@@ -56,7 +57,7 @@ double Fc, Fm;
 /* Modulation index in radians. */
 double Index;
 /* Index in table-length L. */
-double LIndex; 
+double LIndex;
 /* Carrier and modulator. */
 GenFITL Car, Mod, CosMod;
 
@@ -79,12 +80,12 @@ void setup(double fc0, double fm0, double index0, double modphase0) {
     Index = index0;
     LIndex = (index0 * TABLEN) / (2 * M_PI);
     ModPhase = modphase0;
-    LModPhase = (ModPhase*TABLEN)/(2*M_PI);
+    LModPhase = (ModPhase * TABLEN) / (2 * M_PI);
 
     /* Initialize wave tables. */
     for (int i = 0; i < TABLEN; i++) {
-        Sine[i] = sin(2 * M_PI * i / TABLEN);
-        Cosine[i] = cos(2 * M_PI * i / TABLEN);
+	Sine[i] = sin(2 * M_PI * i / TABLEN);
+	Cosine[i] = cos(2 * M_PI * i / TABLEN);
     }
 
     /* Initialize carrier. */
@@ -96,29 +97,30 @@ void setup(double fc0, double fm0, double index0, double modphase0) {
 }
 
 /* ALGORITHM 1: Standard FM-function: eq. (16). */
-void fm_std(int Duration, double *y) {
-    for (int n=0; n<Duration; n++)
-        y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, 0));
+void fm_std(int Duration, double y[]) {
+    for (int n = 0; n < Duration; n++)
+	y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, 0));
 }
 
 /* ALGORITHM 2: Original FM-function: eq. (11). */
-void fm_orig(int Duration, double *y) {
+void fm_orig(int Duration, double y[]) {
     Reset(&Car);
     Reset(&Mod);
-    for (int n=0; n<Duration; n++)
-        y[n] = Osc(&Car, 1, Fc + Osc(&Mod, Index*Fm, Fm, 0),0);
+    for (int n = 0; n < Duration; n++)
+	y[n] = Osc(&Car, 1, Fc + Osc(&Mod, Index * Fm, Fm, 0), 0);
 }
 
- /* ALGORITHM 3: Limit of original FM-function: eq. (12). */
-void fm_orig_limit(int Duration, double *y) {
-    Reset(&Car); Reset(&Mod);
-    for (int n=0; n<Duration; n++)
-        y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, LModPhase) + LIndex);
+/* ALGORITHM 3: Limit of original FM-function: eq. (12). */
+void fm_orig_limit(int Duration, double y[]) {
+    Reset(&Car);
+    Reset(&Mod);
+    for (int n = 0; n < Duration; n++)
+	y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, LModPhase) + LIndex);
 }
 
 /* ALGORITHM 4: Approximated standard FM-function: eq. (14). */
-void fm_approx_std(int Duration, double *y) {
+void fm_approx_std(int Duration, double y[]) {
     Reset(&Car);
-    for (int n=0; n<Duration; n++)
-        y[n] = Osc(&Car, 1, Fc + Osc(&CosMod, Index*Fm, Fm, 0), 0);
+    for (int n = 0; n < Duration; n++)
+	y[n] = Osc(&Car, 1, Fc + Osc(&CosMod, Index * Fm, Fm, 0), 0);
 }
