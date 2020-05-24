@@ -10,71 +10,115 @@
  *     
  */
 
-struct GenFitl {
-    double *Table; /* Pointer to wave table */
-    int L; /* Table length */
-    double FreqAdd; /* Accumulating frequency adder */
-    int Look; /* Temporary */
+#include <math.h>
+
+/* Wave table length. */
+#define TABLEN 48000
+
+typedef struct GenFITL {
+    /* Pointer to wave table */
+    double *Table;
+    /* Table length */
+    int L;
+    /* Accumulating frequency adder */
+    double FreqAdd;
+    /* Temporary */
+    int Look;
+} GenFITL;
+
+/* Initializer. */
+void Init(GenFITL *G, double Tab[], int TabLen) {
+    G->Table = Tab;
+    G->L = TabLen;   
+    G->FreqAdd = 0;
 }
 
-Init(GenFITL *G, double Tab[], int TabLen) /* Initializer */
-{ G->Table = Tab; G->L = TabLen;   
-    G->FreqAdd = 0;}
+/* Generalized modulus operation. */
+/* See (Moore 1990) for details. */
+extern double genmod(double a, int b); 
 
-double genmod(double a, int b); /*Generalized modulus operation. */
-/* See (Moore 1990) for details */
-
-void Reset(GenFITL *G) {G->FreqAdd = 0;}
-
-/* Osc is the "one-tick" lookup oscillator returning one sample */
-double Osc(GenFITL *G, double Amp,
-double FreqInc, double Phase) {
-/* Truncate lookup index */
-G->Look = genmod(G->FreqAdd+Phase, G-L);
-/* Increment FreqAdd */
-G->FreqAdd = genmod(G-FreqAd +FreqInc,
-G->L);
-/* Return sample */
-return Amp*G->TableG->Look;
+void Reset(GenFITL *G) {
+    G->FreqAdd = 0;
 }
 
-double Fc=1,Fm=2; /* Carrier and modulating frequencies */
-double Index=PI; /* Modulation index in radians */
-double LIndex = (Index*TABLEN)
-(2*PI); /* Index in table-length L */
+/* Osc is the "one-tick" lookup oscillator returning one sample. */
+double Osc(GenFITL *G, double Amp, double FreqInc, double Phase) {
+    /* Truncate lookup index. */
+    G->Look = genmod(G->FreqAdd+Phase, G->L);
+    /* Increment FreqAdd. */
+    G->FreqAdd = genmod(G->FreqAdd+FreqInc, G->L);
+    /* Return sample. */
+    return Amp * G->Table[G->Look];
+}
+
+/* Carrier and modulating frequencies. */
+double Fc, Fm;
+/* Modulation index in radians. */
+double Index;
+/* Index in table-length L. */
+double LIndex; 
+/* Carrier and modulator. */
 GenFITL Car, Mod, CosMod;
- /* Instantiate carrier and modulator */
- Init(&Car,Sine,TABLEN); /* Initialize carrier */
- Init(&Mod,Sine,TABLEN); /* Initialize sine modulator */
- Init(&CosMod,Cosine,TABLEN); /* Initialize cosine modulator */
 
- /* ALGORITHM 1: Standard FM-function: eq. (16). */
- for (n=O; n<Duration; n++)
- y[n] = Osc(&Car, 1, Fc, Osc(&Mod,
- LIndex, Fm, 0));
+/* Sine table. */
+double Sine[TABLEN];
+/* Cosine table. */
+double Cosine[TABLEN];
 
- /* ALGORITHM 2: Original FM-function: eq. (11). */
- Reset(&Car); Reset(&Mod);
- for (n=0; n<Duration; n++)
- y[n] = Osc(&Car, 1, Fc + Osc(&Mod,
- Index*Fm, Fm, 0),O);
+/* Modulator phase in radians. */
+double ModPhase;
+/* M.P. in table-length. */
+double LModPhase;
+
+/* Initialize globals. Original defaults were
+   fc0=1, fm0=2, index0=M_PI, modphase0=3*M_PI/2. */
+void setup(double fc0, double fm0, double index0, double modphase0) {
+    /* Initialize scalar globals. */
+    Fc = fc0;
+    Fm = fm0;
+    Index = index0;
+    LIndex = (index0 * TABLEN) / (2 * M_PI);
+    ModPhase = modphase0;
+    LModPhase = (ModPhase*TABLEN)/(2*M_PI);
+
+    /* Initialize wave tables. */
+    for (int i = 0; i < TABLEN; i++) {
+        Sine[i] = sin(2 * M_PI * i / TABLEN);
+        Cosine[i] = cos(2 * M_PI * i / TABLEN);
+    }
+
+    /* Initialize carrier. */
+    Init(&Car, Sine, TABLEN);
+    /* Initialize sine modulator. */
+    Init(&Mod, Sine, TABLEN);
+    /* Initialize cosine modulator. */
+    Init(&CosMod, Cosine, TABLEN);
+}
+
+/* ALGORITHM 1: Standard FM-function: eq. (16). */
+void fm_std(int Duration, double *y) {
+    for (int n=0; n<Duration; n++)
+        y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, 0));
+}
+
+/* ALGORITHM 2: Original FM-function: eq. (11). */
+void fm_orig(int Duration, double *y) {
+    Reset(&Car);
+    Reset(&Mod);
+    for (int n=0; n<Duration; n++)
+        y[n] = Osc(&Car, 1, Fc + Osc(&Mod, Index*Fm, Fm, 0),0);
+}
 
  /* ALGORITHM 3: Limit of original FM-function: eq. (12). */
- double ModPhase = (3*PI)/2;
- /* Modulator phase in radians */
- double LModPhase = (ModPhase*TABLEN)/(2*PI); /* M.P. in table-length */
-Reset(&Car); Reset(&Mod);
-for (n=O; n<Duration; n++)
-y[n] = Osc(&Car, 1, Fc, Osc(&Mod,
-LIndex, Fm, LModPhase) +
- LIndex);
+void fm_orig_limit(int Duration, double *y) {
+    Reset(&Car); Reset(&Mod);
+    for (int n=0; n<Duration; n++)
+        y[n] = Osc(&Car, 1, Fc, Osc(&Mod, LIndex, Fm, LModPhase) + LIndex);
+}
 
- /* ALGORITHM 4: Approximated standard FM-function: eq. (14). */
- Reset(&Car);
- for (n=O; n<Duration; n++)
- y[n] = Osc(&Car, 1, Fc + Osc(&CosMod,
-Index*Fm, Fm, 0), 0);
-
-
-
-
+/* ALGORITHM 4: Approximated standard FM-function: eq. (14). */
+void fm_approx_std(int Duration, double *y) {
+    Reset(&Car);
+    for (int n=0; n<Duration; n++)
+        y[n] = Osc(&Car, 1, Fc + Osc(&CosMod, Index*Fm, Fm, 0), 0);
+}
