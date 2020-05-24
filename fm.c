@@ -34,8 +34,18 @@ void Init(GenFITL * G, double Tab[], int TabLen) {
 }
 
 /* Generalized modulus operation. */
-/* See (Moore 1990) for details. */
-extern double genmod(double a, int b);
+/* XXX Original comment: "See (Moore 1990) for details."
+ * After reviewing that text and Moore's `cmusic` software
+ * I see no such function. The code supplied here is what
+ * I believe was intended based on Moore's `osc()` function.
+ * --Bart 05/2020
+ */
+double genmod(double a, int b) {
+    while (a > b) {
+        a -= b;
+    }
+    return a;
+}
 
 /* Start again at beginning of wave table. */
 void Reset(GenFITL * G) {
