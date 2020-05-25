@@ -6,8 +6,23 @@
  *     Source: Computer Music Journal, Vol. 16, No. 1 (Spring, 1992), pp. 34-42
  *     Published by: The MIT Press
  *     Stable URL: https://www.jstor.org/stable/3680493
- *     Accessed: 24-05-2020 11:31 UTC
+ *     Accessed: 2020-05-24 11:31 UTC
  *     
+ * This code appears to borrow from F. Richard Moore's
+ * `cmusic` library, as described in his book Elements of
+ * Computer Music.
+ *
+ *     Elements of Computer Music
+ *     F. Richard Moore
+ *     Pearson, 1990
+ *     ISBN 0132525526
+ *
+ * This library was distributed as part of the UCSD Computer
+ * Audio Research Laboratory CARL software distribution.
+ *
+ *     http://yadegari.org/carl.html
+ *     Accessed: 2020-05-24 23:01 UTC
+ *
  */
 
 #include <math.h>
